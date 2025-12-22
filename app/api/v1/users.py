@@ -18,7 +18,7 @@ async def google_login(request: Request):
 async def google_callback(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
-        user = await oauth.google.parse_id_token(request, token)
+        user = token.get('userinfo')
         print("User info:", user)
         return JSONResponse(content={"user": user})
     except Exception as e:
