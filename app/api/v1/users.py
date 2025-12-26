@@ -4,6 +4,7 @@ from fastapi import FastAPI, APIRouter,HTTPException,Request,Depends
 from fastapi.responses import JSONResponse
 from app.helpers import UserHelper
 from app.core.database import get_db
+from app.schema.user_schema import LoginRequest, SignupRequest
 from app.security.dependencies import get_current_auth_user
 
 
@@ -30,6 +31,24 @@ async def google_callback(request: Request,user_helper=Depends(UserHelper),db_se
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error") from e
 
+@router.post("/login")
+async def user_login(request:LoginRequest):
+    try:
+        # Extracting the email and password from request
+        email = request.email
+        password = request.password
+
+        # TODO Verifying the password
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error") from e
+
+@router.post("/signup")
+async def user_signup(request:SignupRequest):
+    try:
+        pass
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error") from e
 
 # Creating the endpoint to show the current user info
 @router.get("/me")

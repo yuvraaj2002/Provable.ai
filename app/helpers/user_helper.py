@@ -3,6 +3,7 @@ from app.models.users import User
 from sqlalchemy.sql import func
 from sqlalchemy import select, update
 from app.security.jwt_management import create_access_token
+from app.security.password_management import verify_password
 
 class UserHelper:
     
@@ -67,7 +68,17 @@ class UserHelper:
         except Exception as e:
             print(f"Error getting user: {e}")
             return None
-        
+
+    async def verify_password_generate_token(hashed_password:str):
+        try:
+            if not verify_password(hashed_password):
+                return None
+            else:
+                
+                create_access_token()
+        except Exception as e:
+            return None
+    
     async def update_user(self, user_id: str, update_data: dict, db_session: AsyncSession):
         try:
             await db_session.execute(
