@@ -1,7 +1,7 @@
 """Renamed sub to id column in user table
 
 Revision ID: c72a9443d123
-Revises: 1344a6b346e7
+Revises: 19e7de363f41
 Create Date: 2025-12-25 11:20:40.349976
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'c72a9443d123'
-down_revision: Union[str, Sequence[str], None] = '1344a6b346e7'
+down_revision: Union[str, Sequence[str], None] = '19e7de363f41'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

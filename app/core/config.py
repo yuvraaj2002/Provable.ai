@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     SECRET_KET:str
     ALGORITHM:str
     ACCESS_TOKEN_EXPIRE_MINUTES:int
+    BREVO_API_KEY: str
+    SENDER_NAME:str
+    SENDER_EMAIL:str
+    FRONTEND_BASE_URL: str = "http://localhost:3000"  # Default frontend URL for verification links
     
     model_config = SettingsConfigDict(
         env_file=".env",
