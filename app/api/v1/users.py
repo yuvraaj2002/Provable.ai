@@ -1,10 +1,11 @@
 import traceback
 from app.core.auth import oauth
+from app.core.config import settings
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from app.helpers import UserHelper
 from app.core.database import get_db
-from app.schema.user_schema import LoginRequest, SignupRequest
+from app.schema.user_schema import LoginRequest, SignupRequest, UserResponse
 from app.security.dependencies import get_current_auth_user
 from app.security.jwt_management import verify_token
 from app.security.password_management import PasswordManagement
@@ -30,10 +31,19 @@ async def google_callback(request: Request,db_session=Depends(get_db)):
         token = await oauth.google.authorize_access_token(request)
         user = token.get('userinfo')
         access_token = await user_helper.get_or_create(user_data=user,db_session=db_session)
-        return JSONResponse(content={"access_token": access_token}, status_code=200)
+        
+        # Redirect to frontend with access token
+        frontend_url = settings.FRONTEND_BASE_URL
+        redirect_url = f"{frontend_url}/auth/google/callback?token={access_token}"
+        return RedirectResponse(url=redirect_url, status_code=302)
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Internal Server Error") from e
+        # Redirect to frontend error page on failure
+        frontend_url = settings.FRONTEND_BASE_URL
+        error_redirect_url = f"{frontend_url}"
+        return RedirectResponse(url=error_redirect_url)
 
 @router.post("/login")
 async def user_login(request:LoginRequest,db_session=Depends(get_db)):
@@ -104,7 +114,7 @@ async def verify_mail(token: str, db_session=Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal Server Error") from e
 
 # Creating the endpoint to show the current user info
-@router.get("/me")
+@router.get("/me", response_model=UserResponse)
 async def user_data(user=Depends(get_current_auth_user),db_session=Depends(get_db)):
     try:
         return user

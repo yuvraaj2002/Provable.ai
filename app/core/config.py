@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     BREVO_API_KEY: str
     SENDER_NAME:str
     SENDER_EMAIL:str
-    FRONTEND_BASE_URL: str = "http://localhost:3000"  # Default frontend URL for verification links
+    FRONTEND_BASE_URL: str = "http://localhost:8080"  # Default frontend URL for verification links
     
     model_config = SettingsConfigDict(
         env_file=".env",
