@@ -64,3 +64,28 @@ class ApiKeyHelper():
         except Exception as e:
             await db_session.rollback()
             return False
+
+    async def verify_api_key(self, api_key: str, db_session: AsyncSession):
+        """
+        Verify an API key against the database.
+        Returns the ApiKeys record if valid, None otherwise.
+        """
+        try:
+            # Extract last 4 digits from the provided API key for quick filtering
+            if len(api_key) < 4:
+                return None
+            
+            # Extracting the last 4 digit and lookup in the database
+            last_4_digit = api_key[-4:]
+            result = await db_session.execute(select(ApiKeys).where(ApiKeys.last_4_digit == last_4_digit))
+            api_keys = result.scalars().all()
+            
+            # Verify the API key against each matching hash and returning the user id against matching one
+            for api_key_record in api_keys:
+                if self.password_management.verify_password(api_key, api_key_record.hash_key):
+                    return api_key_record.user_id
+            return None
+            
+        except Exception as e:
+            print(f"Error verifying API key: {e}")
+            return None

@@ -2,12 +2,16 @@ import traceback
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends,HTTPException,status
 from .jwt_management import verify_token
-from app.helpers import UserHelper
+from app.helpers import UserHelper, ApiKeyHelper
 from app.core.database import get_db
 
 # Security scheme for Bearer token
 security = HTTPBearer()
 user_helper=UserHelper()
+api_key_helper=ApiKeyHelper()
+
+
+
 
 async def _get_current_user(credentials: HTTPAuthorizationCredentials, db_session, check_admin: bool = False):
     """
@@ -64,6 +68,54 @@ async def get_current_auth_user(credentials: HTTPAuthorizationCredentials = Depe
 async def get_current_admin_user(credentials: HTTPAuthorizationCredentials = Depends(security), db_session=Depends(get_db)):
     try:
         return await _get_current_user(credentials, db_session, check_admin=True)
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        ) from e
+
+async def get_current_user_from_api_key(credentials: HTTPAuthorizationCredentials = Depends(security), db_session=Depends(get_db)):
+    """
+    Dependency function to authenticate user via API key from Authorization header.
+    Extracts and verifies the API key, then returns the authenticated user data.
+    Raises HTTPException if API key is invalid or user is not found.
+    """
+    try:
+        # Extract the API key from the Bearer token
+        api_key = credentials.credentials
+        
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API key is required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Verify the API key against the database and get the associated user_id
+        user_id = await api_key_helper.verify_api_key(api_key, db_session)
+        
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API key",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Retrieve the user data from the database
+        user_data = await user_helper.get_user(user_id, db_session)
+        
+        if user_data is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        return user_data
+        
     except HTTPException:
         raise
     except Exception as e:
