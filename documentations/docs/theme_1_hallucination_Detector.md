@@ -36,38 +36,130 @@ For each atomic claim, we ask the Judge LLM: *"Based ONLY on the provided contex
 
 ---
 
-### Technical Implementation Steps
+### Technical Implementation
 
-To build this into your platform, you should follow this architecture:
+Our platform implements this using a two-stage LLM pipeline that automatically extracts and verifies claims from RAG-generated responses.
 
-#### Step A: The Prompt Template for the "Judge"
+#### How It Works
 
-You don't need a complex backend at first; you need a robust "Verification Prompt." Here is a simplified version of what your platform would run in the background:
+1. **Claim Extraction**: The LLM response is broken down into individual atomic claims using GPT-4.1
+2. **Claim Verification**: Each claim is cross-examined against the retrieved context to determine if it's supported
+3. **Score Calculation**: A faithfulness score is calculated as the ratio of supported claims to total claims
 
-> **System Prompt:** You are a Fact-Checker. You will be given a 'Context' and a 'Claim'. Your goal is to determine if the 'Claim' can be logically derived from the 'Context'.
-> **Output format:** > - Verdict: [Supported / Not Supported]
-> * Reasoning: [One sentence explanation]
-> 
-> 
+---
 
-#### Step B: Calculating the "Faithfulness Score"
+## API Endpoint: Evaluate Faithfulness
 
-You turn these boolean checks into a metric.
+### Endpoint
 
+```
+POST /api/v1/agent/evaluate-faithfulness
+```
 
-* **100%:** Perfectly grounded in reality.
-* **0%:** Pure fiction.
+**Base URL:** `http://localhost:8000` (development)
 
-#### Step C: Citation Validation (The "Deep Link")
+### Authentication
 
-To implement the **Citation Validation** feature, your platform must intercept the metadata from the Vector Database.
+Requires API key authentication via the `X-API-Key` header.
 
-1. **Extract:** Look for Markdown-style citations in the LLM response (e.g., `[Source 1]`).
-2. **Verify:** Cross-reference `Source 1` with the unique IDs returned by the retriever in that specific session.
-3. **Flag:** If the LLM cites a source that wasn't in the top-k retrieved chunks, your platform marks it as a "Fabricated Citation."
+### Request Body
 
-### How this "Converts" the Lead
+The endpoint accepts a JSON payload with the following structure:
+
+```json
+{
+  "query": "What is the company's remote work policy?",
+  "context_retrieved": {
+    "chunk_1": {
+      "content": "The company requires employees to work 2 days per week in the office. Remote workers receive a €500 monthly stipend for home office setup.",
+      "chunk_id": "chunk_1",
+      "score": 0.95
+    },
+    "chunk_2": {
+      "content": "All employees must attend mandatory team meetings on Mondays and Wednesdays.",
+      "chunk_id": "chunk_2",
+      "score": 0.87
+    }
+  },
+  "llm_response": "The company requires 2 days in-office per week and offers a €500 home-office stipend. All employees must attend mandatory meetings on Mondays and Wednesdays."
+}
+```
+
+#### Request Schema
+
+- **query** (string, required): The original user query that triggered the RAG response
+- **context_retrieved** (object, required): Dictionary of context chunks retrieved from the vector database
+  - Each chunk contains:
+    - **content** (string): The text content of the chunk
+    - **chunk_id** (string): Unique identifier for the chunk
+    - **score** (float): Relevance score between 0.0 and 1.0
+- **llm_response** (string, required): The LLM-generated response to be evaluated
+
+### Response
+
+The endpoint returns a comprehensive evaluation result with verdicts for each claim and an overall faithfulness score.
+
+#### Success Response (200 OK)
+
+```json
+{
+    "verdicts": [
+        {
+            "claim_text": "The company requires 2 days in-office per week.",
+            "verdict": "SUPPORTED",
+            "reasoning": "Chunk 1 explicitly states: 'The company requires employees to work 2 days per week in the office.'"
+        },
+        {
+            "claim_text": "The company offers a €500 home-office stipend.",
+            "verdict": "SUPPORTED",
+            "reasoning": "Chunk 1 states: 'Remote workers receive a €500 monthly stipend for home office setup,' which supports the claim."
+        },
+        {
+            "claim_text": "All employees must attend mandatory meetings on Mondays.",
+            "verdict": "SUPPORTED",
+            "reasoning": "Chunk 2 states: 'All employees must attend mandatory team meetings on Mondays and Wednesdays.' Thus, mandatory meetings on Mondays are supported."
+        },
+        {
+            "claim_text": "All employees must attend mandatory meetings on Wednesdays.",
+            "verdict": "SUPPORTED",
+            "reasoning": "Chunk 2 states: 'All employees must attend mandatory team meetings on Mondays and Wednesdays.' Thus, mandatory meetings on Wednesdays are supported."
+        }
+    ],
+    "total_claims": 4,
+    "supported_claims": 4,
+    "not_supported_claims": 0,
+    "faithfullness_score": 1.0
+}
+```
+
+#### Response Schema
+
+- **verdicts** (array): List of claim verification results
+  - **claim_text** (string): The exact claim that was verified
+  - **verdict** (string): Either `"SUPPORTED"` or `"NOT_SUPPORTED"`
+  - **reasoning** (string): Brief explanation of why the verdict was chosen
+- **total_claims** (integer): Total number of claims extracted from the LLM response
+- **supported_claims** (integer): Number of claims that are supported by the context
+- **not_supported_claims** (integer): Number of claims that are not supported by the context
+- **faithfullness_score** (float): Calculated as `supported_claims / total_claims`, ranges from 0.0 to 1.0
+  - **1.0**: All claims are supported (perfectly faithful)
+  - **0.0**: No claims are supported (complete hallucination)
+
+#### Error Responses
+
+- **500 Internal Server Error**: Failed to extract claims or verify them (e.g., LLM processing error)
+- **401 Unauthorized**: Invalid or missing API key
+
+### Example Use Case
 
 When a CTO sees a dashboard showing that **15% of their bot's answers contain claims not found in their documentation**, the "fear" becomes a quantifiable risk. You aren't just selling "safety"; you are selling the **visibility** they currently lack.
 
-**Would you like me to draft the specific Python logic or an API schema for how the "Judge" would process these claims?**
+### Future Enhancements
+
+#### Citation Validation (Planned)
+
+To implement the **Citation Validation** feature, the platform will intercept metadata from the Vector Database:
+
+1. **Extract:** Look for Markdown-style citations in the LLM response (e.g., `[Source 1]`)
+2. **Verify:** Cross-reference `Source 1` with the unique IDs returned by the retriever in that specific session
+3. **Flag:** If the LLM cites a source that wasn't in the top-k retrieved chunks, mark it as a "Fabricated Citation"
