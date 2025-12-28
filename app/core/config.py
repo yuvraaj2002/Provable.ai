@@ -1,8 +1,6 @@
 from pydantic_settings import BaseSettings,SettingsConfigDict
 
 class Settings(BaseSettings):
-    GEMINI_API_KEY: str
-    GEMINI_MODEL:str
     DATABASE_URL: str
     DATABASE_URL_SYNC: str
     OPENAI_API_KEY: str

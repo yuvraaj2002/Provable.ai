@@ -68,11 +68,12 @@ class ApiKeyHelper():
     async def verify_api_key(self, api_key: str, db_session: AsyncSession):
         """
         Verify an API key against the database.
-        Returns the ApiKeys record if valid, None otherwise.
+        Returns the user_id if valid, None otherwise.
         """
         try:
             # Extract last 4 digits from the provided API key for quick filtering
             if len(api_key) < 4:
+                print("API key too short")
                 return None
             
             # Extracting the last 4 digit and lookup in the database
@@ -80,12 +81,21 @@ class ApiKeyHelper():
             result = await db_session.execute(select(ApiKeys).where(ApiKeys.last_4_digit == last_4_digit))
             api_keys = result.scalars().all()
             
+            if not api_keys:
+                print(f"No API keys found with last 4 digits: {last_4_digit}")
+                return None
+            
             # Verify the API key against each matching hash and returning the user id against matching one
             for api_key_record in api_keys:
                 if self.password_management.verify_password(api_key, api_key_record.hash_key):
+                    print(f"API key verified successfully for user: {api_key_record.user_id}")
                     return api_key_record.user_id
+            
+            print("API key verification failed - no matching hash found")
             return None
             
         except Exception as e:
             print(f"Error verifying API key: {e}")
+            import traceback
+            traceback.print_exc()
             return None

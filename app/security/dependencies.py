@@ -77,15 +77,28 @@ async def get_current_admin_user(credentials: HTTPAuthorizationCredentials = Dep
             detail="Internal server error"
         ) from e
 
-async def get_current_user_from_api_key(credentials: HTTPAuthorizationCredentials = Depends(security), db_session=Depends(get_db)):
+async def get_current_user_from_api_key(
+    credentials: HTTPAuthorizationCredentials = Depends(security), 
+    db_session=Depends(get_db)
+):
     """
     Dependency function to authenticate user via API key from Authorization header.
     Extracts and verifies the API key, then returns the authenticated user data.
     Raises HTTPException if API key is invalid or user is not found.
     """
     try:
+        # Check if credentials were provided
+        if credentials is None:
+            print("No credentials provided in get_current_user_from_api_key")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API key is required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
         # Extract the API key from the Bearer token
         api_key = credentials.credentials
+        print(f"Received API key (first 20 chars): {api_key[:20] if api_key else 'None'}...")
         
         if not api_key:
             raise HTTPException(
@@ -122,5 +135,5 @@ async def get_current_user_from_api_key(credentials: HTTPAuthorizationCredential
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
+            detail=f"Internal server error: {str(e)}"
         ) from e

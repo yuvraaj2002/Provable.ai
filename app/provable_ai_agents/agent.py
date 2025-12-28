@@ -1,34 +1,35 @@
-from google.adk.agents.llm_agent import Agent
 from app.core.config import settings
+from pydantic import BaseModel
+from openai import OpenAI
 
 class CustomAgents():
 
     def __init__(self):
-        pass
+        self.openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-    def _load_prompt(self,prompt_path):
-        try:
-            pass
-        except Exception as e:
-            return None
-
-    def create_agent(self, name:str, model:str, instruction_prompt_path:str, description:str, output_key:str):
-        try:
-            # Loading the prompt
-            instruction_prompt_md = self._load_prompt(instruction_prompt_path)
-            if instruction_prompt_md is None:
-                return None
+    def run_agent(self, model: str, prompt: str, output_schema: BaseModel):
+        """
+        Run an agent using OpenAI responses API.
+        
+        Args:
+            model: The model to use (e.g., "gpt-4o", "o1-preview")
+            prompt: The input prompt for the agent
+            output_schema: The response format schema (JSON schema format)
             
-            # Instantiating the Agent
-            agent = Agent(
-                name=name,
+        Returns:
+            Response object from OpenAI, or None if error occurs
+        """
+        try:
+            response = self.openai_client.responses.parse(
                 model=model,
-                instruction=instruction_prompt_md,
-                description=description,
-                output_key=output_key
+                input=prompt,
+                text_format=output_schema
             )
-            return agent
+            return response
         except Exception as e:
+            print(f"Error running agent: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
 
