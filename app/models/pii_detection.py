@@ -12,6 +12,7 @@ class PII_Registeration(Base):
     bearer_token = Column(String,nullable=False)
     description = Column(Text,nullable=False)
     email_alert = Column(Boolean,nullable=False) 
+    que_to_generate = Column(Integer,nullable=False)
     created_at = Column(DateTime,server_default=func.now(),nullable=False) 
     updated_at = Column(DateTime,server_default=func.now(), onupdate=func.now(),nullable=False)  
 
