@@ -1,10 +1,25 @@
 from fastapi import FastAPI
-from app import users_router,api_keys_router,agent_router
+from app import users_router, api_keys_router, agent_router
 from app.core.config import settings
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
+from redis.asyncio import Redis
+from fastapi_limiter import FastAPILimiter
+from contextlib import asynccontextmanager
+from app.core.config import settings
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    redis = Redis.from_url(settings.REDIS_URL)
+    await FastAPILimiter.init(redis)
+    yield
+    # Shutdown (cleanup if needed)
+    await redis.aclose()
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware first (executes last, wrapping all responses)
 app.add_middleware(
@@ -23,6 +38,7 @@ app.add_middleware(SessionMiddleware, secret_key=settings.SESSION_SECRET_KEY)
 app.include_router(users_router)
 app.include_router(api_keys_router)
 app.include_router(agent_router)
+
 
 @app.get("/")
 async def root():
