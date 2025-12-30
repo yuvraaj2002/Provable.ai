@@ -76,8 +76,12 @@ class LLMService():
             
             if context_utilization:
                 result['context_utilization'] = context_utilization.model_dump()
+                # Calculate context utilization rate using the helper method
+                context_utilization_rate = self.helper.calculate_context_utilization(context_utilization.chunks)
+                result['context_utilization_rate'] = context_utilization_rate
             else:
                 result['context_utilization'] = None
+                result['context_utilization_rate'] = None
             
             return result
 

@@ -65,7 +65,7 @@ class GeneratorQualityEvaluationHelper:
         
         return supported_claims / total_claims
 
-    def _calculate_context_utilization(self, chunks: List[ChunkUtilization]) -> float:
+    def calculate_context_utilization(self, chunks: List[ChunkUtilization]) -> float:
         """Calculates context utilization using Average Precision over chunk usage."""
         if not chunks:
             return 0.0

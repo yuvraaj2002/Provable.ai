@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException,APIRouter,status
 from fastapi.responses import JSONResponse
-from app.schema.agent_schema import EvaluateGeneratorRequest
+from app.schema.evaluate_generator_schema import EvaluateGeneratorRequest
 from app.schema.pii_registeration_schema import PIIRegisteration
 from app.security.dependencies import get_current_user_from_api_key,get_current_auth_user
 from app.services.llm_service import LLMService

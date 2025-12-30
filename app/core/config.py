@@ -3,6 +3,8 @@ from pydantic_settings import BaseSettings,SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL: str
     DATABASE_URL_SYNC: str
+    MAX_CHUNKS:int
+    MAX_TOKEN_PER_CHUNK:int
     OPENAI_API_KEY: str
     CLIENT_ID:str
     CLIENT_SECRET:str
