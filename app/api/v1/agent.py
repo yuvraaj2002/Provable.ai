@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException,APIRouter,status
 from fastapi.responses import JSONResponse
-from app.schema.agent_schema import EvaluateFaithfulnessRequest
+from app.schema.agent_schema import EvaluateGeneratorRequest
 from app.schema.pii_registeration_schema import PIIRegisteration
 from app.security.dependencies import get_current_user_from_api_key,get_current_auth_user
 from app.services.llm_service import LLMService
@@ -12,13 +12,13 @@ llm_service = LLMService()
 pii_helper = PIIRegisterationHelper()
 
 
-@router.post("/evaluate-faithfulness")
-async def evaluate_faithfulness(request: EvaluateFaithfulnessRequest, current_auth_user=Depends(get_current_user_from_api_key)):
+@router.post("/evaluate-generator")
+async def evaluate_faithfulness(request: EvaluateGeneratorRequest, current_auth_user=Depends(get_current_user_from_api_key)):
     try:
         # TODO : Check current subscription, deduct credits, perform action
         
         # Analyze faithfulness and extract claims
-        result = await llm_service.analyze_faithfulness(request)
+        result = await llm_service.evaluate_generator(request)
         
         if result is None:
             raise HTTPException(
