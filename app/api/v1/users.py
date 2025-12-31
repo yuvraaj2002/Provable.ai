@@ -10,14 +10,14 @@ from app.security.dependencies import get_current_auth_user
 from app.security.jwt_management import verify_token
 from app.security.password_management import PasswordManagement
 from fastapi.concurrency import run_in_threadpool
-from fastapi_limiter.depends import RateLimiter
+# Removed RateLimiter import
 
 # Instantiate classes at the top
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 user_helper = UserHelper()
 password_management = PasswordManagement()
 
-@router.get("/google-login",dependencies=[RateLimiter(times=10, seconds=60)])
+@router.get("/google-login")
 async def google_login(request: Request):
     try:
         redirect_uri = request.url_for('google_callback')
@@ -26,12 +26,12 @@ async def google_login(request: Request):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error") from e
     
-@router.get("/google-callback",dependencies=[RateLimiter(times=10, seconds=60)])
-async def google_callback(request: Request,db_session=Depends(get_db)):
+@router.get("/google-callback")
+async def google_callback(request: Request, db_session=Depends(get_db)):
     try:
         token = await oauth.google.authorize_access_token(request)
         user = token.get('userinfo')
-        access_token = await user_helper.get_or_create(user_data=user,db_session=db_session)
+        access_token = await user_helper.get_or_create(user_data=user, db_session=db_session)
         
         # Redirect to frontend with access token
         frontend_url = settings.FRONTEND_BASE_URL
@@ -46,32 +46,32 @@ async def google_callback(request: Request,db_session=Depends(get_db)):
         error_redirect_url = f"{frontend_url}"
         return RedirectResponse(url=error_redirect_url)
 
-@router.post("/login",dependencies=[RateLimiter(times=10, seconds=60)])
-async def user_login(request:LoginRequest,db_session=Depends(get_db)):
+@router.post("/login")
+async def user_login(request: LoginRequest, db_session=Depends(get_db)):
     try:
         # Extracting the email and password from request
         email = request.email
         password = request.password
 
         # Verifying the password + generating the access token
-        access_token = await user_helper.verify_password_generate_token(email,password,db_session)
-        return JSONResponse(content={"access_token": access_token},status_code=200)
+        access_token = await user_helper.verify_password_generate_token(email, password, db_session)
+        return JSONResponse(content={"access_token": access_token}, status_code=200)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error") from e
 
-@router.post("/signup",dependencies=[RateLimiter(times=10, seconds=60)])
-async def user_signup(request:SignupRequest,db_session=Depends(get_db)):
+@router.post("/signup")
+async def user_signup(request: SignupRequest, db_session=Depends(get_db)):
     try:
         # Getting username, email and password from request
         username = request.username
         email = request.email
-        hashed_password = await run_in_threadpool(password_management.hash_password,request.password)
+        hashed_password = await run_in_threadpool(password_management.hash_password, request.password)
 
         # Creating record in pending user table and initiating the verification mail
-        result = await user_helper.create_pending_user(username,email,hashed_password,db_session)
+        result = await user_helper.create_pending_user(username, email, hashed_password, db_session)
         if result:
-            return JSONResponse(content={"message": "Verification mail has been sent to your registered mail."},status_code=200)
+            return JSONResponse(content={"message": "Verification mail has been sent to your registered mail."}, status_code=200)
         else:
             # Email already exists or other error
             raise HTTPException(status_code=400, detail="Email already registered or invalid request")
@@ -82,7 +82,7 @@ async def user_signup(request:SignupRequest,db_session=Depends(get_db)):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error") from e
 
-@router.get("/verify-mail",dependencies=[RateLimiter(times=10, seconds=60)])
+@router.get("/verify-mail")
 async def verify_mail(token: str, db_session=Depends(get_db)):
     try:
         # Verify the token
@@ -115,8 +115,8 @@ async def verify_mail(token: str, db_session=Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal Server Error") from e
 
 # Creating the endpoint to show the current user info
-@router.get("/me", response_model=UserResponse,dependencies=[RateLimiter(times=10, seconds=60)])
-async def user_data(user=Depends(get_current_auth_user),db_session=Depends(get_db)):
+@router.get("/me", response_model=UserResponse)
+async def user_data(user=Depends(get_current_auth_user), db_session=Depends(get_db)):
     try:
         return user
     except Exception as e:
